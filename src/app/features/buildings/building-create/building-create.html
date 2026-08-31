@@ -1,0 +1,60 @@
+<main class="min-h-screen bg-slate-50 px-4 py-8">
+  <div class="mx-auto max-w-lg">
+    <a routerLink="/home" class="text-sm text-slate-500 hover:text-slate-700">‹ Mis edificios</a>
+
+    <div class="mt-4 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+      <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
+      <h1 class="mt-2 text-2xl font-semibold text-slate-900">Crear edificio</h1>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4">
+        <div>
+          <label for="name" class="block text-sm font-medium text-slate-700">Nombre</label>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            placeholder="Torres del Parque"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+          />
+          @if (form.controls.name.invalid && form.controls.name.touched) {
+            <p class="mt-1 text-xs text-red-600">Ingresá un nombre.</p>
+          }
+        </div>
+
+        <div>
+          <label for="address" class="block text-sm font-medium text-slate-700">Dirección</label>
+          <input
+            id="address"
+            type="text"
+            formControlName="address"
+            placeholder="Av. Siempre Viva 742"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+          />
+        </div>
+
+        <div>
+          <label for="timezone" class="block text-sm font-medium text-slate-700">Zona horaria</label>
+          <input
+            id="timezone"
+            type="text"
+            formControlName="timezone"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+          />
+          <p class="mt-1 text-xs text-slate-400">Formato IANA, ej. America/Argentina/Buenos_Aires.</p>
+        </div>
+
+        @if (errorMessage()) {
+          <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ errorMessage() }}</p>
+        }
+
+        <button
+          type="submit"
+          [disabled]="submitting()"
+          class="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+        >
+          {{ submitting() ? 'Creando…' : 'Crear edificio' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</main>

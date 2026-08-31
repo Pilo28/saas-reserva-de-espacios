@@ -16,5 +16,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/home/home').then((m) => m.Home),
     canActivate: [authGuard],
   },
+  {
+    path: 'buildings/new',
+    loadComponent: () =>
+      import('./features/buildings/building-create/building-create').then((m) => m.BuildingCreate),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'buildings/:id',
+    loadComponent: () =>
+      import('./features/buildings/building-detail/building-detail').then((m) => m.BuildingDetail),
+    canActivate: [authGuard],
+  },
   { path: '**', redirectTo: 'home' },
 ];
