@@ -1,0 +1,28 @@
+<main class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+  <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+    <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Fase 1 · Setup técnico</p>
+    <h1 class="mt-2 text-2xl font-semibold text-slate-900">Reserva de Espacios</h1>
+    <p class="mt-1 text-sm text-slate-500">Verificación del pipeline: build, deploy y conexión a Supabase.</p>
+
+    <div class="mt-6 rounded-lg border px-4 py-3 text-sm">
+      @switch (status()) {
+        @case ('checking') {
+          <p class="text-slate-600">Verificando conexión con Supabase…</p>
+        }
+        @case ('not-configured') {
+          <p class="text-amber-700">
+            Supabase no configurado todavía. Completá <code class="font-mono text-xs">supabaseUrl</code> y
+            <code class="font-mono text-xs">supabaseAnonKey</code> en
+            <code class="font-mono text-xs">src/environments/environment.development.ts</code>.
+          </p>
+        }
+        @case ('ok') {
+          <p class="text-teal-700">Conectado a Supabase correctamente.</p>
+        }
+        @case ('error') {
+          <p class="text-red-700">Error al conectar: {{ errorMessage() }}</p>
+        }
+      }
+    </div>
+  </div>
+</main>
