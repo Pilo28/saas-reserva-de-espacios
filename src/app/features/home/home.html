@@ -5,12 +5,20 @@
         <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
         <p class="text-sm text-slate-500">{{ auth.user()?.email }}</p>
       </div>
-      <button
-        (click)="signOut()"
-        class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-      >
-        Cerrar sesión
-      </button>
+      <div class="flex items-center gap-2">
+        <a
+          routerLink="/reservations"
+          class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Mis reservas
+        </a>
+        <button
+          (click)="signOut()"
+          class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Cerrar sesión
+        </button>
+      </div>
     </div>
   </header>
 

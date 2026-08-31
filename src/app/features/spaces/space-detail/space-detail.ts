@@ -14,7 +14,7 @@ export class SpaceDetail implements OnInit {
   protected readonly spacesService = inject(SpacesService);
 
   protected readonly buildingId = this.route.snapshot.paramMap.get('id')!;
-  private readonly spaceId = this.route.snapshot.paramMap.get('spaceId')!;
+  protected readonly spaceId = this.route.snapshot.paramMap.get('spaceId')!;
 
   protected readonly loading = signal(true);
   protected readonly notFound = signal(false);

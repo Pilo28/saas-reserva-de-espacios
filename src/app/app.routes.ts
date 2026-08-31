@@ -43,5 +43,19 @@ export const routes: Routes = [
     loadComponent: () => import('./features/spaces/space-detail/space-detail').then((m) => m.SpaceDetail),
     canActivate: [authGuard],
   },
+  {
+    path: 'buildings/:id/spaces/:spaceId/reserve',
+    loadComponent: () =>
+      import('./features/reservations/reservation-create/reservation-create').then(
+        (m) => m.ReservationCreate,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'reservations',
+    loadComponent: () =>
+      import('./features/reservations/my-reservations/my-reservations').then((m) => m.MyReservations),
+    canActivate: [authGuard],
+  },
   { path: '**', redirectTo: 'home' },
 ];

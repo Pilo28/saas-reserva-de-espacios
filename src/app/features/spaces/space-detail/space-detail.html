@@ -12,8 +12,18 @@
       </div>
     } @else {
       <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
-        <h1 class="mt-2 text-2xl font-semibold text-slate-900">{{ form.controls.name.value }}</h1>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
+            <h1 class="mt-2 text-2xl font-semibold text-slate-900">{{ form.controls.name.value }}</h1>
+          </div>
+          <a
+            [routerLink]="['/buildings', buildingId, 'spaces', spaceId, 'reserve']"
+            class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+          >
+            Reservar
+          </a>
+        </div>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4">
           <div>
