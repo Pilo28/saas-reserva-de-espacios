@@ -13,6 +13,8 @@ export class BuildingDetail implements OnInit {
   private readonly buildingsService = inject(BuildingsService);
   private readonly fb = inject(NonNullableFormBuilder);
 
+  protected readonly buildingId = this.route.snapshot.paramMap.get('id')!;
+
   protected readonly loading = signal(true);
   protected readonly isAdmin = signal(false);
   protected readonly notFound = signal(false);
@@ -27,17 +29,10 @@ export class BuildingDetail implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) {
-      this.notFound.set(true);
-      this.loading.set(false);
-      return;
-    }
-
     try {
       const [building, role] = await Promise.all([
-        this.buildingsService.get(id),
-        this.buildingsService.getMyRole(id),
+        this.buildingsService.get(this.buildingId),
+        this.buildingsService.getMyRole(this.buildingId),
       ]);
 
       if (!building) {
@@ -63,8 +58,7 @@ export class BuildingDetail implements OnInit {
   }
 
   protected async submit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id || this.form.invalid) {
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
@@ -74,7 +68,7 @@ export class BuildingDetail implements OnInit {
     this.errorMessage.set('');
 
     try {
-      await this.buildingsService.update(id, this.form.getRawValue());
+      await this.buildingsService.update(this.buildingId, this.form.getRawValue());
       this.saved.set(true);
     } catch (error) {
       this.errorMessage.set(error instanceof Error ? error.message : 'No se pudo guardar.');

@@ -28,5 +28,20 @@ export const routes: Routes = [
       import('./features/buildings/building-detail/building-detail').then((m) => m.BuildingDetail),
     canActivate: [authGuard],
   },
+  {
+    path: 'buildings/:id/spaces',
+    loadComponent: () => import('./features/spaces/space-list/space-list').then((m) => m.SpaceList),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'buildings/:id/spaces/new',
+    loadComponent: () => import('./features/spaces/space-create/space-create').then((m) => m.SpaceCreate),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'buildings/:id/spaces/:spaceId',
+    loadComponent: () => import('./features/spaces/space-detail/space-detail').then((m) => m.SpaceDetail),
+    canActivate: [authGuard],
+  },
   { path: '**', redirectTo: 'home' },
 ];
