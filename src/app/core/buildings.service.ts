@@ -27,7 +27,6 @@ export interface BuildingMember {
   id: string;
   userId: string;
   fullName: string;
-  email: string | null;
   role: BuildingRole;
   floor: string | null;
   unitLabel: string | null;
@@ -121,23 +120,10 @@ export class BuildingsService {
       }
     }
 
-    const emailsByUserId = new Map<string, string>();
-    try {
-      const { data: emailRows } = await this.supabase.rpc('get_building_member_emails', {
-        target_building_id: buildingId,
-      });
-      for (const row of (emailRows ?? []) as { user_id: string; email: string }[]) {
-        emailsByUserId.set(row.user_id, row.email);
-      }
-    } catch {
-      // solo el admin puede leer mails; si falla (no admin), se muestra sin mail
-    }
-
     return rows.map((r) => ({
       id: r.id,
       userId: r.user_id,
       fullName: namesByUserId.get(r.user_id) ?? 'Vecino',
-      email: emailsByUserId.get(r.user_id) ?? null,
       role: r.role,
       floor: r.units?.floor ?? null,
       unitLabel: r.units?.label ?? null,
