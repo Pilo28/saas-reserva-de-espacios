@@ -8,19 +8,17 @@
 // puede haber creado un admin de ese edificio, asi que esta consulta ya prueba autorizacion
 // sin duplicar la logica de is_admin_of.
 //
-// Variables de entorno: se configuran todas a mano en Project Settings > Edge Functions >
-// Secrets (no se depende de las que Supabase inyecta automaticamente, cuyo nombre puede
-// variar entre versiones del runtime/esquema de keys):
-//   PROJECT_URL       - URL del proyecto (la misma que SUPABASE_URL del frontend)
-//   PUBLISHABLE_KEY   - la anon/publishable key (publica, ya vive en el frontend)
-//   SERVICE_ROLE_KEY  - la secret/service_role key (nunca al frontend)
-//   SITE_URL          - URL real del sitio en Vercel, para que el link del mail vuelva ahi
+// Variables de entorno: SUPABASE_URL, SUPABASE_ANON_KEY y SUPABASE_SERVICE_ROLE_KEY son
+// secrets reservados que Supabase ya deja disponibles en toda Edge Function (aparecen como
+// "Deprecated" en el dashboard nuevo, pero siguen andando; no hace falta crearlos a mano).
+// SITE_URL es el unico secret custom que hay que agregar (Project Settings > Edge Functions
+// > Secrets), con la URL real del sitio en Vercel, para que el link del mail vuelva ahi.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const PROJECT_URL = Deno.env.get('PROJECT_URL')!;
-const PUBLISHABLE_KEY = Deno.env.get('PUBLISHABLE_KEY')!;
-const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!;
+const PROJECT_URL = Deno.env.get('SUPABASE_URL')!;
+const PUBLISHABLE_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const SITE_URL = Deno.env.get('SITE_URL') ?? '';
 
 const corsHeaders = {
