@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, { redirectTo });
 
     if (inviteError) {
-      const alreadyRegistered = /already registered|already exists/i.test(inviteError.message ?? '');
+      const alreadyRegistered = /already\s+(been\s+)?registered|already exists/i.test(inviteError.message ?? '');
       if (!alreadyRegistered) return json({ error: inviteError.message }, 400);
 
       // La cuenta ya existe (por ejemplo, quedo a mitad de camino de una invitacion
