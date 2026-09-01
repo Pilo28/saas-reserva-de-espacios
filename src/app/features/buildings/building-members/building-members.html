@@ -171,12 +171,22 @@
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <p class="text-slate-700">{{ m.fullName }}</p>
+                    @if (m.email) {
+                      <p class="text-xs text-slate-500">{{ m.email }}</p>
+                    }
                     <p class="text-xs text-slate-500">{{ unitLabel(m.floor, m.unitLabel) }}</p>
                   </div>
                   <div class="flex shrink-0 items-center gap-3">
                     <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                       {{ m.role === 'admin' ? 'Administrador' : 'Vecino' }}
                     </span>
+                    <button
+                      type="button"
+                      (click)="startEditMemberEmail(m)"
+                      class="text-xs font-medium text-teal-700 hover:underline"
+                    >
+                      Editar mail
+                    </button>
                     <button
                       type="button"
                       (click)="startEditMemberUnit(m)"
@@ -193,6 +203,36 @@
                     </button>
                   </div>
                 </div>
+
+                @if (editingEmailMemberId() === m.id) {
+                  <form [formGroup]="emailForm" (ngSubmit)="saveEmail()" class="mt-3 flex flex-wrap items-end gap-2">
+                    <div class="flex-1 basis-full sm:basis-auto">
+                      <label class="block text-xs font-medium text-slate-700">Mail</label>
+                      <input
+                        type="email"
+                        formControlName="email"
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      [disabled]="savingEmail()"
+                      class="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelEditEmail()"
+                      class="text-xs font-medium text-slate-500 hover:underline"
+                    >
+                      Cancelar
+                    </button>
+                  </form>
+                  @if (emailError()) {
+                    <p class="mt-2 text-xs text-red-600">{{ emailError() }}</p>
+                  }
+                }
 
                 @if (editingMemberId() === m.id) {
                   <form [formGroup]="unitForm" (ngSubmit)="saveUnit()" class="mt-3 flex flex-wrap items-end gap-2">

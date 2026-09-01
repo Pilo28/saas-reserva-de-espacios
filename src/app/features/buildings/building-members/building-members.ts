@@ -44,6 +44,13 @@ export class BuildingMembers implements OnInit {
   protected readonly savingUnit = signal(false);
   protected readonly unitError = signal('');
 
+  protected readonly emailForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+  });
+  protected readonly editingEmailMemberId = signal<string | null>(null);
+  protected readonly savingEmail = signal(false);
+  protected readonly emailError = signal('');
+
   protected readonly confirmDialog = signal<{
     title: string;
     message: string;
@@ -157,13 +164,52 @@ export class BuildingMembers implements OnInit {
 
   protected startEditMemberUnit(member: BuildingMember): void {
     this.editingInvitationId.set(null);
+    this.editingEmailMemberId.set(null);
     this.editingMemberId.set(member.id);
     this.unitError.set('');
     this.unitForm.reset({ floor: member.floor ?? '', unitLabel: member.unitLabel ?? '' });
   }
 
+  protected startEditMemberEmail(member: BuildingMember): void {
+    this.editingMemberId.set(null);
+    this.editingInvitationId.set(null);
+    this.editingEmailMemberId.set(member.id);
+    this.emailError.set('');
+    this.emailForm.reset({ email: member.email ?? '' });
+  }
+
+  protected cancelEditEmail(): void {
+    this.editingEmailMemberId.set(null);
+    this.emailError.set('');
+  }
+
+  protected async saveEmail(): Promise<void> {
+    const memberId = this.editingEmailMemberId();
+    if (!memberId) return;
+
+    if (this.emailForm.invalid) {
+      this.emailForm.markAllAsTouched();
+      return;
+    }
+
+    this.savingEmail.set(true);
+    this.emailError.set('');
+
+    try {
+      const { email } = this.emailForm.getRawValue();
+      await this.buildingsService.updateMemberEmail(this.buildingId, memberId, email);
+      this.cancelEditEmail();
+      await this.loadAll();
+    } catch (error) {
+      this.emailError.set(error instanceof Error ? error.message : 'No se pudo guardar el mail.');
+    } finally {
+      this.savingEmail.set(false);
+    }
+  }
+
   protected startEditInvitationUnit(invitation: BuildingInvitation): void {
     this.editingMemberId.set(null);
+    this.editingEmailMemberId.set(null);
     this.editingInvitationId.set(invitation.id);
     this.unitError.set('');
     this.unitForm.reset({ floor: invitation.floor ?? '', unitLabel: invitation.unitLabel ?? '' });
