@@ -38,12 +38,14 @@
   <main class="mx-auto max-w-3xl px-4 py-8">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-semibold text-slate-900">Mis edificios</h1>
-      <a
-        routerLink="/buildings/new"
-        class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
-      >
-        + Crear edificio
-      </a>
+      @if (canCreateBuilding()) {
+        <a
+          routerLink="/buildings/new"
+          class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+        >
+          + Crear edificio
+        </a>
+      }
     </div>
 
     @if (loading()) {

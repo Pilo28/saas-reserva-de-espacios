@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { BuildingsService, type BuildingMembership } from '../../core/buildings.service';
@@ -21,6 +21,12 @@ export class Home implements OnInit {
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly unreadCount = signal(0);
+
+  // Un vecino invitado no debe ver "Crear edificio" como acción principal: ese flujo es
+  // el alta self-service de un admin nuevo, no algo que un vecino necesite para reservar.
+  protected readonly canCreateBuilding = computed(
+    () => !this.items().some((item) => item.role === 'resident'),
+  );
 
   ngOnInit(): void {
     this.acceptInvitationsThenLoad();

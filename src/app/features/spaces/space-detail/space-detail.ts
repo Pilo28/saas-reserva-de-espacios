@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { SpacesService, type SpaceRules, type SpaceSchedule } from '../../../core/spaces.service';
+import { BuildingsService } from '../../../core/buildings.service';
 
 @Component({
   selector: 'app-space-detail',
@@ -11,6 +12,7 @@ import { SpacesService, type SpaceRules, type SpaceSchedule } from '../../../cor
 export class SpaceDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly buildingsService = inject(BuildingsService);
   protected readonly spacesService = inject(SpacesService);
 
   protected readonly buildingId = this.route.snapshot.paramMap.get('id')!;
@@ -18,6 +20,7 @@ export class SpaceDetail implements OnInit {
 
   protected readonly loading = signal(true);
   protected readonly notFound = signal(false);
+  protected readonly isAdmin = signal(false);
   protected readonly saving = signal(false);
   protected readonly saved = signal(false);
   protected readonly errorMessage = signal('');
@@ -55,11 +58,16 @@ export class SpaceDetail implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const space = await this.spacesService.get(this.spaceId);
+      const [space, role] = await Promise.all([
+        this.spacesService.get(this.spaceId),
+        this.buildingsService.getMyRole(this.buildingId),
+      ]);
       if (!space) {
         this.notFound.set(true);
         return;
       }
+
+      this.isAdmin.set(role === 'admin');
 
       this.form.patchValue({
         name: space.name,
@@ -68,17 +76,23 @@ export class SpaceDetail implements OnInit {
         isActive: space.is_active,
       });
 
+      if (!this.isAdmin()) {
+        this.form.disable();
+      }
+
       this.schedules.set(await this.spacesService.listSchedules(this.spaceId));
 
-      const rules = await this.spacesService.getRules(this.spaceId);
-      if (rules) {
-        this.rulesForm.patchValue({
-          maxActiveReservationsPerUser: rules.max_active_reservations_per_user,
-          minAdvanceHours: rules.min_advance_hours,
-          maxAdvanceDays: rules.max_advance_days,
-          maxDurationHours: rules.max_duration_hours,
-          minCancellationHours: rules.min_cancellation_hours,
-        });
+      if (this.isAdmin()) {
+        const rules = await this.spacesService.getRules(this.spaceId);
+        if (rules) {
+          this.rulesForm.patchValue({
+            maxActiveReservationsPerUser: rules.max_active_reservations_per_user,
+            minAdvanceHours: rules.min_advance_hours,
+            maxAdvanceDays: rules.max_advance_days,
+            maxDurationHours: rules.max_duration_hours,
+            minCancellationHours: rules.min_cancellation_hours,
+          });
+        }
       }
     } catch (error) {
       this.errorMessage.set(error instanceof Error ? error.message : 'No se pudo cargar el espacio.');
