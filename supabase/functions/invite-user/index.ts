@@ -66,14 +66,21 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(PROJECT_URL, SERVICE_ROLE_KEY);
-    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
-      redirectTo: SITE_URL ? `${SITE_URL}/set-password` : undefined,
-    });
+    const redirectTo = SITE_URL ? `${SITE_URL}/set-password` : undefined;
+
+    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, { redirectTo });
 
     if (inviteError) {
       const alreadyRegistered = /already registered|already exists/i.test(inviteError.message ?? '');
       if (!alreadyRegistered) return json({ error: inviteError.message }, 400);
-      return json({ ok: true, emailSent: false, reason: 'already_registered' });
+
+      // La cuenta ya existe (por ejemplo, quedo a mitad de camino de una invitacion
+      // anterior sin llegar a poner contraseña): un link de "invitacion" no sirve para un
+      // usuario ya creado, pero un link de "restablecer contraseña" si funciona para
+      // cualquier cuenta existente y logra lo mismo -- entrar y elegir contraseña.
+      const { error: resetError } = await adminClient.auth.resetPasswordForEmail(normalizedEmail, { redirectTo });
+      if (resetError) return json({ error: resetError.message }, 400);
+      return json({ ok: true, emailSent: true, reason: 'resent_as_password_reset' });
     }
 
     return json({ ok: true, emailSent: true });
