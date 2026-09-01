@@ -6,6 +6,8 @@ export interface DashboardReservation {
   spaceId: string;
   spaceName: string;
   userName: string;
+  userEmail: string | null;
+  unitInfo: string | null;
   startsAt: string;
   endsAt: string;
   guestsCount: number | null;
@@ -15,6 +17,8 @@ export interface DashboardCancellation {
   id: string;
   spaceName: string;
   userName: string;
+  userEmail: string | null;
+  unitInfo: string | null;
   cancelledAt: string;
 }
 
@@ -97,11 +101,41 @@ export class DashboardService {
     );
 
     const namesByUserId = new Map<string, string>();
+    const unitInfoByUserId = new Map<string, string>();
+    const emailsByUserId = new Map<string, string>();
     if (userIds.length > 0) {
       const profilesRes = await this.supabase.from('profiles').select('id, full_name').in('id', userIds);
       if (profilesRes.error) throw profilesRes.error;
       for (const row of profilesRes.data ?? []) {
         namesByUserId.set(row.id, row.full_name ?? 'Vecino');
+      }
+
+      const membersRes = await this.supabase
+        .from('building_members')
+        .select('user_id, units(floor, label)')
+        .eq('building_id', buildingId)
+        .in('user_id', userIds);
+      if (membersRes.error) throw membersRes.error;
+      for (const row of (membersRes.data ?? []) as unknown as {
+        user_id: string;
+        units: { floor: string | null; label: string } | null;
+      }[]) {
+        if (!row.units) continue;
+        const label = [row.units.floor ? `Piso ${row.units.floor}` : null, `Depto ${row.units.label}`]
+          .filter(Boolean)
+          .join(', ');
+        unitInfoByUserId.set(row.user_id, label);
+      }
+
+      try {
+        const { data: emailRows } = await this.supabase.rpc('get_building_member_emails', {
+          target_building_id: buildingId,
+        });
+        for (const row of (emailRows ?? []) as { user_id: string; email: string }[]) {
+          emailsByUserId.set(row.user_id, row.email);
+        }
+      } catch {
+        // si la funcion todavia no esta migrada, el panel igual funciona sin el mail
       }
     }
 
@@ -110,6 +144,8 @@ export class DashboardService {
       spaceId: row.space_id,
       spaceName: row.spaces?.name ?? '',
       userName: namesByUserId.get(row.user_id) ?? 'Vecino',
+      userEmail: emailsByUserId.get(row.user_id) ?? null,
+      unitInfo: unitInfoByUserId.get(row.user_id) ?? null,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
       guestsCount: row.guests_count,
@@ -135,6 +171,8 @@ export class DashboardService {
       id: row.id,
       spaceName: row.spaces?.name ?? '',
       userName: namesByUserId.get(row.user_id) ?? 'Vecino',
+      userEmail: emailsByUserId.get(row.user_id) ?? null,
+      unitInfo: unitInfoByUserId.get(row.user_id) ?? null,
       cancelledAt: row.cancelled_at,
     }));
 
