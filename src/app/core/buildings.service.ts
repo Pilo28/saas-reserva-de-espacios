@@ -39,9 +39,13 @@ export class BuildingsService {
   private readonly units = inject(UnitsService);
 
   async listMine(): Promise<BuildingMembership[]> {
+    const userId = this.auth.user()?.id;
+    if (!userId) return [];
+
     const { data, error } = await this.supabase
       .from('building_members')
       .select('role, buildings(id, name, address, timezone, created_at)')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
