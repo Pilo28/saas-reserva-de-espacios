@@ -8,16 +8,19 @@
 // puede haber creado un admin de ese edificio, asi que esta consulta ya prueba autorizacion
 // sin duplicar la logica de is_admin_of.
 //
-// Variables de entorno: SUPABASE_URL, SUPABASE_ANON_KEY y SUPABASE_SERVICE_ROLE_KEY las
-// inyecta Supabase automaticamente en toda Edge Function. SITE_URL hay que configurarla a
-// mano (Project Settings > Edge Functions > Secrets) con la URL real del sitio en Vercel,
-// para que el link del mail vuelva a la app y no a un dominio de prueba.
+// Variables de entorno: se configuran todas a mano en Project Settings > Edge Functions >
+// Secrets (no se depende de las que Supabase inyecta automaticamente, cuyo nombre puede
+// variar entre versiones del runtime/esquema de keys):
+//   PROJECT_URL       - URL del proyecto (la misma que SUPABASE_URL del frontend)
+//   PUBLISHABLE_KEY   - la anon/publishable key (publica, ya vive en el frontend)
+//   SERVICE_ROLE_KEY  - la secret/service_role key (nunca al frontend)
+//   SITE_URL          - URL real del sitio en Vercel, para que el link del mail vuelva ahi
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const PROJECT_URL = Deno.env.get('PROJECT_URL')!;
+const PUBLISHABLE_KEY = Deno.env.get('PUBLISHABLE_KEY')!;
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!;
 const SITE_URL = Deno.env.get('SITE_URL') ?? '';
 
 const corsHeaders = {
@@ -47,7 +50,7 @@ Deno.serve(async (req) => {
     const normalizedEmail = String(email).trim().toLowerCase();
 
     // Cliente "como el usuario que llama": respeta su RLS, no la bypassea.
-    const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const callerClient = createClient(PROJECT_URL, PUBLISHABLE_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
 
@@ -64,7 +67,7 @@ Deno.serve(async (req) => {
       return json({ error: 'No hay una invitación pendiente para ese mail en ese edificio.' }, 403);
     }
 
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const adminClient = createClient(PROJECT_URL, SERVICE_ROLE_KEY);
     const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
       redirectTo: SITE_URL ? `${SITE_URL}/set-password` : undefined,
     });
