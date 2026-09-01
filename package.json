@@ -11,7 +11,8 @@
     "test:reservations": "node scripts/test-reservations-flow.mjs",
     "test:rules": "node scripts/test-reservation-rules.mjs",
     "test:dashboard": "node scripts/test-dashboard-rls.mjs",
-    "test:notifications": "node scripts/test-notifications.mjs"
+    "test:notifications": "node scripts/test-notifications.mjs",
+    "test:permissions": "node scripts/test-permissions.mjs"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
