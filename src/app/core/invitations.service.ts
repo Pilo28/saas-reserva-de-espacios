@@ -34,15 +34,17 @@ export class InvitationsService {
     return (data ?? []).map((row) => this.toInvitation(row));
   }
 
-  async invite(buildingId: string, input: InvitationInput): Promise<BuildingInvitation> {
+  async invite(buildingId: string, input: InvitationInput): Promise<{ invitation: BuildingInvitation; emailSent: boolean }> {
     const userId = this.auth.user()?.id;
     if (!userId) throw new Error('No hay sesión activa.');
+
+    const email = input.email.trim().toLowerCase();
 
     const { data, error } = await this.supabase
       .from('building_invitations')
       .insert({
         building_id: buildingId,
-        email: input.email.trim().toLowerCase(),
+        email,
         role: input.role,
         invited_by: userId,
       })
@@ -56,7 +58,24 @@ export class InvitationsService {
       throw error;
     }
 
-    return this.toInvitation(data);
+    const invitation = this.toInvitation(data);
+    const emailSent = await this.sendInvitationEmail(buildingId, email);
+
+    return { invitation, emailSent };
+  }
+
+  private async sendInvitationEmail(buildingId: string, email: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('invite-user', {
+        body: { email, buildingId },
+      });
+      if (error) return false;
+      return Boolean(data?.emailSent);
+    } catch {
+      // si la Edge Function no esta desplegada o falla, la invitacion pendiente ya quedo
+      // creada igual: se resuelve sola cuando esa persona entre a la app con ese mail.
+      return false;
+    }
   }
 
   private toInvitation(row: {

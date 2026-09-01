@@ -31,6 +31,7 @@ export class BuildingMembers implements OnInit {
 
   protected readonly inviting = signal(false);
   protected readonly inviteError = signal('');
+  protected readonly inviteSuccess = signal('');
 
   async ngOnInit(): Promise<void> {
     try {
@@ -65,9 +66,15 @@ export class BuildingMembers implements OnInit {
 
     this.inviting.set(true);
     this.inviteError.set('');
+    this.inviteSuccess.set('');
 
     try {
-      await this.invitationsService.invite(this.buildingId, this.inviteForm.getRawValue());
+      const { emailSent } = await this.invitationsService.invite(this.buildingId, this.inviteForm.getRawValue());
+      this.inviteSuccess.set(
+        emailSent
+          ? 'Le mandamos un mail con el link para registrarse.'
+          : 'Invitación guardada. Como no se pudo mandar el mail (o ya tenía cuenta), avisale vos: en cuanto entre a la app con ese mail, se suma solo.',
+      );
       this.inviteForm.reset({ email: '', role: 'resident' });
       await this.loadAll();
     } catch (error) {
