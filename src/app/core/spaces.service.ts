@@ -31,6 +31,23 @@ export interface SpaceScheduleInput {
   closesAt: string;
 }
 
+export interface SpaceRules {
+  space_id: string;
+  max_active_reservations_per_user: number | null;
+  min_advance_hours: number | null;
+  max_advance_days: number | null;
+  max_duration_hours: number | null;
+  min_cancellation_hours: number | null;
+}
+
+export interface SpaceRulesInput {
+  maxActiveReservationsPerUser: number | null;
+  minAdvanceHours: number | null;
+  maxAdvanceDays: number | null;
+  maxDurationHours: number | null;
+  minCancellationHours: number | null;
+}
+
 const WEEKDAY_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 @Service()
@@ -132,5 +149,37 @@ export class SpacesService {
   async removeSchedule(id: string): Promise<void> {
     const { error } = await this.supabase.from('space_schedules').delete().eq('id', id);
     if (error) throw error;
+  }
+
+  async getRules(spaceId: string): Promise<SpaceRules | null> {
+    const { data, error } = await this.supabase
+      .from('space_rules')
+      .select(
+        'space_id, max_active_reservations_per_user, min_advance_hours, max_advance_days, max_duration_hours, min_cancellation_hours',
+      )
+      .eq('space_id', spaceId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as SpaceRules | null;
+  }
+
+  async saveRules(buildingId: string, spaceId: string, input: SpaceRulesInput): Promise<SpaceRules> {
+    const { data, error } = await this.supabase
+      .from('space_rules')
+      .upsert({
+        space_id: spaceId,
+        building_id: buildingId,
+        max_active_reservations_per_user: input.maxActiveReservationsPerUser,
+        min_advance_hours: input.minAdvanceHours,
+        max_advance_days: input.maxAdvanceDays,
+        max_duration_hours: input.maxDurationHours,
+        min_cancellation_hours: input.minCancellationHours,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as SpaceRules;
   }
 }

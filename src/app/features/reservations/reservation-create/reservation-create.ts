@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ReservationsService, type ReservationSlot } from '../../../core/reservations.service';
+import { SpacesService, type SpaceRules } from '../../../core/spaces.service';
 
 function todayDateString(): string {
   const now = new Date();
@@ -19,6 +20,7 @@ export class ReservationCreate {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly reservations = inject(ReservationsService);
+  private readonly spacesService = inject(SpacesService);
   private readonly router = inject(Router);
 
   protected readonly buildingId = this.route.snapshot.paramMap.get('id')!;
@@ -36,10 +38,32 @@ export class ReservationCreate {
   protected readonly loadingSlots = signal(false);
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly rules = signal<SpaceRules | null>(null);
 
   constructor() {
     this.loadSlots();
+    this.loadRules();
     this.form.controls.date.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.loadSlots());
+  }
+
+  private async loadRules(): Promise<void> {
+    try {
+      this.rules.set(await this.spacesService.getRules(this.spaceId));
+    } catch {
+      // el cartel de reglas es informativo; si falla, igual se puede intentar reservar
+    }
+  }
+
+  protected hasVisibleRules(): boolean {
+    const r = this.rules();
+    if (!r) return false;
+    return (
+      r.max_active_reservations_per_user !== null ||
+      r.min_advance_hours !== null ||
+      r.max_advance_days !== null ||
+      r.max_duration_hours !== null ||
+      r.min_cancellation_hours !== null
+    );
   }
 
   private async loadSlots(): Promise<void> {

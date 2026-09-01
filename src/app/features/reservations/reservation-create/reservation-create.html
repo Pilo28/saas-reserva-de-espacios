@@ -8,6 +8,29 @@
       <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
       <h1 class="mt-2 text-2xl font-semibold text-slate-900">Reservar</h1>
 
+      @if (hasVisibleRules()) {
+        <div class="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          <p class="font-medium">Reglas de este espacio</p>
+          <ul class="mt-1 list-inside list-disc space-y-0.5">
+            @if (rules()?.max_active_reservations_per_user; as n) {
+              <li>Máximo {{ n }} reserva(s) activa(s) por vecino.</li>
+            }
+            @if (rules()?.max_duration_hours; as n) {
+              <li>Duración máxima: {{ n }} hora(s).</li>
+            }
+            @if (rules()?.min_advance_hours; as n) {
+              <li>Reservá con al menos {{ n }} hora(s) de anticipación.</li>
+            }
+            @if (rules()?.max_advance_days; as n) {
+              <li>No se puede reservar con más de {{ n }} día(s) de anticipación.</li>
+            }
+            @if (rules()?.min_cancellation_hours; as n) {
+              <li>Podés cancelar hasta {{ n }} hora(s) antes del inicio.</li>
+            }
+          </ul>
+        </div>
+      }
+
       <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4">
         <div>
           <label for="date" class="block text-sm font-medium text-slate-700">Fecha</label>
