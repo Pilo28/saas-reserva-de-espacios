@@ -44,6 +44,15 @@ export class BuildingMembers implements OnInit {
   protected readonly savingUnit = signal(false);
   protected readonly unitError = signal('');
 
+  protected readonly confirmDialog = signal<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    action: () => Promise<void>;
+  } | null>(null);
+  protected readonly confirming = signal(false);
+  protected readonly confirmError = signal('');
+
   async ngOnInit(): Promise<void> {
     try {
       const role = await this.buildingsService.getMyRole(this.buildingId);
@@ -100,13 +109,50 @@ export class BuildingMembers implements OnInit {
     }
   }
 
-  protected async cancelInvitation(id: string): Promise<void> {
+  protected askCancelInvitation(id: string, email: string): void {
+    this.confirmDialog.set({
+      title: 'Cancelar invitación',
+      message: `¿Seguro que querés cancelar la invitación a ${email}?`,
+      confirmLabel: 'Cancelar invitación',
+      action: async () => {
+        await this.invitationsService.cancel(id);
+        this.invitations.set(this.invitations().filter((i) => i.id !== id));
+      },
+    });
+  }
+
+  protected askRemoveMember(member: BuildingMember): void {
+    this.confirmDialog.set({
+      title: 'Quitar vecino',
+      message: `¿Seguro que querés quitar a ${member.fullName} de este edificio? Va a perder el acceso, pero sus reservas pasadas quedan igual.`,
+      confirmLabel: 'Quitar',
+      action: async () => {
+        await this.buildingsService.removeMember(member.id);
+        this.members.set(this.members().filter((m) => m.id !== member.id));
+      },
+    });
+  }
+
+  protected async confirmAction(): Promise<void> {
+    const dialog = this.confirmDialog();
+    if (!dialog) return;
+
+    this.confirming.set(true);
+    this.confirmError.set('');
+
     try {
-      await this.invitationsService.cancel(id);
-      this.invitations.set(this.invitations().filter((i) => i.id !== id));
+      await dialog.action();
+      this.confirmDialog.set(null);
     } catch (error) {
-      this.inviteError.set(error instanceof Error ? error.message : 'No se pudo cancelar la invitación.');
+      this.confirmError.set(error instanceof Error ? error.message : 'No se pudo completar la acción.');
+    } finally {
+      this.confirming.set(false);
     }
+  }
+
+  protected cancelConfirm(): void {
+    this.confirmDialog.set(null);
+    this.confirmError.set('');
   }
 
   protected startEditMemberUnit(member: BuildingMember): void {

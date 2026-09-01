@@ -14,6 +14,7 @@ export class SetPassword implements OnInit {
   private readonly router = inject(Router);
 
   protected readonly form = this.fb.group({
+    fullName: ['', [Validators.required]],
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
@@ -40,16 +41,29 @@ export class SetPassword implements OnInit {
     this.submitting.set(true);
     this.errorMessage.set('');
 
-    const { password } = this.form.getRawValue();
-    const { error } = await this.supabase.auth.updateUser({ password });
-
-    this.submitting.set(false);
+    const { fullName, password } = this.form.getRawValue();
+    const { data, error } = await this.supabase.auth.updateUser({ password });
 
     if (error) {
       this.errorMessage.set(error.message);
+      this.submitting.set(false);
       return;
     }
 
+    if (data.user) {
+      const { error: profileError } = await this.supabase
+        .from('profiles')
+        .update({ full_name: fullName })
+        .eq('id', data.user.id);
+
+      if (profileError) {
+        this.errorMessage.set(profileError.message);
+        this.submitting.set(false);
+        return;
+      }
+    }
+
+    this.submitting.set(false);
     this.router.navigateByUrl('/home');
   }
 }

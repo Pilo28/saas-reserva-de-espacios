@@ -72,7 +72,7 @@ export class ReservationCreate {
 
     this.loadingSlots.set(true);
     try {
-      this.slots.set(await this.reservations.listSlotsForSpaceOnDate(this.spaceId, date));
+      this.slots.set(await this.reservations.listSlotsForSpaceOnDate(this.spaceId, this.buildingId, date));
     } catch {
       // no bloqueamos el formulario si falla la vista previa de ocupacion
     } finally {

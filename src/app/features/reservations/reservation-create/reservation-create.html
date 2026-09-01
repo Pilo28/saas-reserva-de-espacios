@@ -53,6 +53,9 @@
               @for (slot of slots(); track slot.id) {
                 <li class="text-sm text-slate-700">
                   {{ slotTime(slot.starts_at) }} a {{ slotTime(slot.ends_at) }} · {{ slot.userName }}
+                  @if (slot.unitInfo) {
+                    <span class="text-slate-500">({{ slot.unitInfo }})</span>
+                  }
                 </li>
               }
             </ul>

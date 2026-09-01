@@ -10,6 +10,7 @@ export interface ReservationSlot {
   ends_at: string;
   status: ReservationStatus;
   userName: string;
+  unitInfo: string | null;
 }
 
 export interface Reservation {
@@ -46,7 +47,7 @@ export class ReservationsService {
   private readonly supabase = inject(SupabaseService).client;
   private readonly auth = inject(AuthService);
 
-  async listSlotsForSpaceOnDate(spaceId: string, dateStr: string): Promise<ReservationSlot[]> {
+  async listSlotsForSpaceOnDate(spaceId: string, buildingId: string, dateStr: string): Promise<ReservationSlot[]> {
     const dayStart = new Date(`${dateStr}T00:00:00`);
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayEnd.getDate() + 1);
@@ -65,11 +66,29 @@ export class ReservationsService {
     const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
 
     const namesByUserId = new Map<string, string>();
+    const unitInfoByUserId = new Map<string, string>();
     if (userIds.length > 0) {
       const profilesRes = await this.supabase.from('profiles').select('id, full_name').in('id', userIds);
       if (profilesRes.error) throw profilesRes.error;
       for (const p of profilesRes.data ?? []) {
         namesByUserId.set(p.id, p.full_name ?? 'Vecino');
+      }
+
+      const membersRes = await this.supabase
+        .from('building_members')
+        .select('user_id, units(floor, label)')
+        .eq('building_id', buildingId)
+        .in('user_id', userIds);
+      if (membersRes.error) throw membersRes.error;
+      for (const m of (membersRes.data ?? []) as unknown as {
+        user_id: string;
+        units: { floor: string | null; label: string } | null;
+      }[]) {
+        if (!m.units) continue;
+        const label = [m.units.floor ? `Piso ${m.units.floor}` : null, `Depto ${m.units.label}`]
+          .filter(Boolean)
+          .join(', ');
+        unitInfoByUserId.set(m.user_id, label);
       }
     }
 
@@ -79,6 +98,7 @@ export class ReservationsService {
       ends_at: r.ends_at,
       status: r.status,
       userName: namesByUserId.get(r.user_id) ?? 'Vecino',
+      unitInfo: unitInfoByUserId.get(r.user_id) ?? null,
     }));
   }
 

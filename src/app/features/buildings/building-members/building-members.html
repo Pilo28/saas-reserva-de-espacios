@@ -109,7 +109,7 @@
                     </button>
                     <button
                       type="button"
-                      (click)="cancelInvitation(inv.id)"
+                      (click)="askCancelInvitation(inv.id, inv.email)"
                       class="text-xs font-medium text-red-600 hover:underline"
                     >
                       Cancelar
@@ -171,6 +171,9 @@
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <p class="text-slate-700">{{ m.fullName }}</p>
+                    @if (m.email) {
+                      <p class="text-xs text-slate-500">{{ m.email }}</p>
+                    }
                     <p class="text-xs text-slate-500">{{ unitLabel(m.floor, m.unitLabel) }}</p>
                   </div>
                   <div class="flex shrink-0 items-center gap-3">
@@ -183,6 +186,13 @@
                       class="text-xs font-medium text-teal-700 hover:underline"
                     >
                       Editar unidad
+                    </button>
+                    <button
+                      type="button"
+                      (click)="askRemoveMember(m)"
+                      class="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Quitar
                     </button>
                   </div>
                 </div>
@@ -231,4 +241,36 @@
       </div>
     }
   </div>
+
+  @if (confirmDialog(); as dialog) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+      <div class="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
+        <h3 class="text-lg font-semibold text-slate-900">{{ dialog.title }}</h3>
+        <p class="mt-2 text-sm text-slate-600">{{ dialog.message }}</p>
+
+        @if (confirmError()) {
+          <p class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ confirmError() }}</p>
+        }
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            (click)="cancelConfirm()"
+            [disabled]="confirming()"
+            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            Volver
+          </button>
+          <button
+            type="button"
+            (click)="confirmAction()"
+            [disabled]="confirming()"
+            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            {{ confirming() ? 'Espera…' : dialog.confirmLabel }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </main>
