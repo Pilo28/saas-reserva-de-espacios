@@ -29,6 +29,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'buildings/:id/members',
+    loadComponent: () =>
+      import('./features/buildings/building-members/building-members').then((m) => m.BuildingMembers),
+    canActivate: [authGuard],
+  },
+  {
     path: 'buildings/:id/dashboard',
     loadComponent: () =>
       import('./features/buildings/building-dashboard/building-dashboard').then((m) => m.BuildingDashboard),

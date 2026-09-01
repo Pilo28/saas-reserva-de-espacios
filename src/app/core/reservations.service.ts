@@ -9,6 +9,7 @@ export interface ReservationSlot {
   starts_at: string;
   ends_at: string;
   status: ReservationStatus;
+  userName: string;
 }
 
 export interface Reservation {
@@ -52,14 +53,33 @@ export class ReservationsService {
 
     const { data, error } = await this.supabase
       .from('reservation_slots')
-      .select('id, starts_at, ends_at, status')
+      .select('id, starts_at, ends_at, status, user_id')
       .eq('space_id', spaceId)
       .gte('starts_at', dayStart.toISOString())
       .lt('starts_at', dayEnd.toISOString())
       .order('starts_at', { ascending: true });
 
     if (error) throw error;
-    return (data ?? []) as ReservationSlot[];
+
+    const rows = (data ?? []) as { id: string; starts_at: string; ends_at: string; status: ReservationStatus; user_id: string }[];
+    const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
+
+    const namesByUserId = new Map<string, string>();
+    if (userIds.length > 0) {
+      const profilesRes = await this.supabase.from('profiles').select('id, full_name').in('id', userIds);
+      if (profilesRes.error) throw profilesRes.error;
+      for (const p of profilesRes.data ?? []) {
+        namesByUserId.set(p.id, p.full_name ?? 'Vecino');
+      }
+    }
+
+    return rows.map((r) => ({
+      id: r.id,
+      starts_at: r.starts_at,
+      ends_at: r.ends_at,
+      status: r.status,
+      userName: namesByUserId.get(r.user_id) ?? 'Vecino',
+    }));
   }
 
   async create(input: ReservationInput): Promise<Reservation> {

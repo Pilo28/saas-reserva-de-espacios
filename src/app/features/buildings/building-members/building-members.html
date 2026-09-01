@@ -1,0 +1,107 @@
+<main class="min-h-screen bg-slate-50 px-4 py-8">
+  <div class="mx-auto max-w-2xl space-y-6">
+    <a [routerLink]="['/buildings', buildingId]" class="text-sm text-slate-500 hover:text-slate-700">
+      ‹ Volver al edificio
+    </a>
+
+    @if (loading()) {
+      <p class="text-sm text-slate-500">Cargando…</p>
+    } @else if (forbidden()) {
+      <div class="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p class="text-sm text-slate-600">Esta pantalla es solo para administradores del edificio.</p>
+      </div>
+    } @else if (errorMessage()) {
+      <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ errorMessage() }}</p>
+    } @else {
+      <div>
+        <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
+        <h1 class="mt-2 text-2xl font-semibold text-slate-900">Vecinos</h1>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900">Invitar un vecino</h2>
+        <p class="mt-1 text-sm text-slate-500">
+          Cargá el mail. Si ya tiene cuenta se suma al edificio al toque; si no, queda pendiente hasta que se
+          registre o inicie sesión con ese mail. Avisale vos por fuera de la app (no se envía ningún mail).
+        </p>
+
+        <form [formGroup]="inviteForm" (ngSubmit)="invite()" class="mt-4 flex flex-wrap items-end gap-3">
+          <div class="flex-1">
+            <label for="email" class="block text-xs font-medium text-slate-700">Mail</label>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="vecino@mail.com"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            />
+          </div>
+
+          <div>
+            <label for="role" class="block text-xs font-medium text-slate-700">Rol</label>
+            <select
+              id="role"
+              formControlName="role"
+              class="mt-1 rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            >
+              <option value="resident">Vecino</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            [disabled]="inviting()"
+            class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+          >
+            {{ inviting() ? 'Invitando…' : 'Invitar' }}
+          </button>
+        </form>
+
+        @if (inviteError()) {
+          <p class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ inviteError() }}</p>
+        }
+      </div>
+
+      @if (invitations().length > 0) {
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900">Invitaciones pendientes</h2>
+          <ul class="mt-3 space-y-2">
+            @for (inv of invitations(); track inv.id) {
+              <li class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <span class="text-slate-700">
+                  {{ inv.email }} · {{ inv.role === 'admin' ? 'Administrador' : 'Vecino' }}
+                </span>
+                <button
+                  type="button"
+                  (click)="cancelInvitation(inv.id)"
+                  class="text-xs font-medium text-red-600 hover:underline"
+                >
+                  Cancelar
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900">Miembros ({{ members().length }})</h2>
+        @if (members().length === 0) {
+          <p class="mt-3 text-sm text-slate-500">Todavía no hay vecinos en este edificio.</p>
+        } @else {
+          <ul class="mt-3 space-y-2">
+            @for (m of members(); track m.id) {
+              <li class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <span class="text-slate-700">{{ m.fullName }}</span>
+                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                  {{ m.role === 'admin' ? 'Administrador' : 'Vecino' }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  </div>
+</main>

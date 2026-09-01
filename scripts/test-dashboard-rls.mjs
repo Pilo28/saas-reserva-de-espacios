@@ -61,9 +61,9 @@ console.log('\n2. el admin de OTRO edificio NO ve el nombre...');
 const b1SeesA2 = await b1.client.from('profiles').select('id, full_name').eq('id', a2.userId).maybeSingle();
 b1SeesA2.data ? fail('B1 (admin de otro edificio) no deberia ver el nombre de A2', JSON.stringify(b1SeesA2)) : ok('B1 (admin de otro edificio) NO ve el nombre de A2');
 
-console.log('\n3. un vecino comun no ve el nombre de otro...');
+console.log('\n3. un vecino ve el nombre de otro miembro de SU MISMO edificio (Fase 11.5: alta de vecinos)...');
 const a2SeesA1 = await a2.client.from('profiles').select('id, full_name').eq('id', a1.userId).maybeSingle();
-a2SeesA1.data ? fail('A2 (vecino) no deberia ver el nombre de A1', JSON.stringify(a2SeesA1)) : ok('A2 (vecino) NO ve el nombre de A1 (ni siquiera el de su admin)');
+a2SeesA1.data?.full_name ? ok('A2 (vecino) ve el nombre de A1 (mismo edificio)') : fail('A2 deberia ver el nombre de A1, son del mismo edificio', JSON.stringify(a2SeesA1));
 
 console.log('\n4. todos pueden seguir viendo su propio nombre...');
 const a2SeesSelf = await a2.client.from('profiles').select('id, full_name').eq('id', a2.userId).maybeSingle();

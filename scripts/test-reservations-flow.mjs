@@ -92,8 +92,8 @@ console.log('\n3. privacidad: reservation_slots vs reservations completa...');
 const a2SeesFullViaTable = await a2.client.from('reservations').select('id').eq('id', rebooked.data.id);
 a2SeesFullViaTable.data?.length === 0 ? ok('A2 NO ve la reserva de A1 en la tabla completa (no es dueno ni admin)') : fail('A2 no deberia ver la fila completa de la reserva de A1', JSON.stringify(a2SeesFullViaTable));
 
-const a2SeesSlot = await a2.client.from('reservation_slots').select('id, starts_at, ends_at, status').eq('id', rebooked.data.id);
-a2SeesSlot.data?.length === 1 ? ok('A2 SI ve el horario ocupado via reservation_slots (sin notas/usuario)') : fail('A2 deberia ver el slot en reservation_slots', JSON.stringify(a2SeesSlot));
+const a2SeesSlot = await a2.client.from('reservation_slots').select('id, starts_at, ends_at, status, user_id').eq('id', rebooked.data.id).maybeSingle();
+a2SeesSlot.data?.user_id === a1.userId ? ok('A2 ve el horario ocupado Y quien lo reservo (Fase 11.5) via reservation_slots (sin notas)') : fail('A2 deberia ver el slot y el user_id del dueno en reservation_slots', JSON.stringify(a2SeesSlot));
 
 const b1SeesSlotOfA = await b1.client.from('reservation_slots').select('id').eq('id', rebooked.data.id);
 b1SeesSlotOfA.data?.length === 0 ? ok('B1 (otro edificio) NO ve el slot de A1 en reservation_slots') : fail('B1 no deberia ver reservas del edificio A', JSON.stringify(b1SeesSlotOfA));

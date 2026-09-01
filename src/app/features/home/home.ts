@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { BuildingsService, type BuildingMembership } from '../../core/buildings.service';
 import { NotificationsService } from '../../core/notifications.service';
+import { InvitationsService } from '../../core/invitations.service';
 
 @Component({
   selector: 'app-home',
@@ -13,6 +14,7 @@ export class Home implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly buildings = inject(BuildingsService);
   private readonly notifications = inject(NotificationsService);
+  private readonly invitations = inject(InvitationsService);
   private readonly router = inject(Router);
 
   protected readonly items = signal<BuildingMembership[]>([]);
@@ -21,8 +23,13 @@ export class Home implements OnInit {
   protected readonly unreadCount = signal(0);
 
   ngOnInit(): void {
-    this.load();
+    this.acceptInvitationsThenLoad();
     this.loadNotifications();
+  }
+
+  private async acceptInvitationsThenLoad(): Promise<void> {
+    await this.invitations.acceptPending();
+    await this.load();
   }
 
   private async load(): Promise<void> {

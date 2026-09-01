@@ -51,7 +51,9 @@
           } @else {
             <ul class="mt-2 space-y-1">
               @for (slot of slots(); track slot.id) {
-                <li class="text-sm text-slate-700">{{ slotTime(slot.starts_at) }} a {{ slotTime(slot.ends_at) }}</li>
+                <li class="text-sm text-slate-700">
+                  {{ slotTime(slot.starts_at) }} a {{ slotTime(slot.ends_at) }} · {{ slot.userName }}
+                </li>
               }
             </ul>
           }
