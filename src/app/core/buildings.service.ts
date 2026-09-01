@@ -1,6 +1,7 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
+import { UnitsService, type UnitInput } from './units.service';
 
 export interface Building {
   id: string;
@@ -27,12 +28,15 @@ export interface BuildingMember {
   userId: string;
   fullName: string;
   role: BuildingRole;
+  floor: string | null;
+  unitLabel: string | null;
 }
 
 @Service()
 export class BuildingsService {
   private readonly supabase = inject(SupabaseService).client;
   private readonly auth = inject(AuthService);
+  private readonly units = inject(UnitsService);
 
   async listMine(): Promise<BuildingMembership[]> {
     const { data, error } = await this.supabase
@@ -93,13 +97,18 @@ export class BuildingsService {
   async listMembers(buildingId: string): Promise<BuildingMember[]> {
     const { data, error } = await this.supabase
       .from('building_members')
-      .select('id, user_id, role')
+      .select('id, user_id, role, units(floor, label)')
       .eq('building_id', buildingId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
 
-    const rows = data ?? [];
+    const rows = (data ?? []) as unknown as {
+      id: string;
+      user_id: string;
+      role: BuildingRole;
+      units: { floor: string | null; label: string } | null;
+    }[];
     const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
 
     const namesByUserId = new Map<string, string>();
@@ -115,8 +124,16 @@ export class BuildingsService {
       id: r.id,
       userId: r.user_id,
       fullName: namesByUserId.get(r.user_id) ?? 'Vecino',
-      role: r.role as BuildingRole,
+      role: r.role,
+      floor: r.units?.floor ?? null,
+      unitLabel: r.units?.label ?? null,
     }));
+  }
+
+  async updateMemberUnit(memberId: string, buildingId: string, unit: UnitInput): Promise<void> {
+    const unitId = await this.units.findOrCreate(buildingId, unit);
+    const { error } = await this.supabase.from('building_members').update({ unit_id: unitId }).eq('id', memberId);
+    if (error) throw error;
   }
 
   async update(id: string, patch: BuildingInput): Promise<Building> {

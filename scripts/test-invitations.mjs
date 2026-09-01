@@ -108,12 +108,27 @@ c1SeesInvites.data?.length === 0 ? ok('C1 (admin de otro edificio) no ve las inv
 const c1CancelsInvite = await c1.client.from('building_invitations').update({ status: 'cancelled' }).eq('id', inv2.data.id).select();
 c1CancelsInvite.data?.length === 0 ? ok('C1 no puede cancelar una invitacion del edificio A') : fail('C1 no deberia poder modificar invitaciones de A', JSON.stringify(c1CancelsInvite));
 
+console.log('\n8. piso y depto quedan asignados al aceptar la invitacion...');
+const unit3B = await a1.client.from('units').insert({ building_id: bA.data.id, floor: '3', label: 'B' }).select().single();
+if (unit3B.error) throw unit3B.error;
+
+const d1 = await newUser('d1');
+const invWithUnit = await a1.client.from('building_invitations').insert({ building_id: bA.data.id, email: d1.email, role: 'resident', unit_id: unit3B.data.id, invited_by: a1.userId }).select().single();
+if (invWithUnit.error) throw invWithUnit.error;
+
+const d1Accepts = await d1.client.rpc('accept_pending_invitations');
+if (d1Accepts.error) throw d1Accepts.error;
+
+const d1Membership = await admin.from('building_members').select('unit_id').eq('building_id', bA.data.id).eq('user_id', d1.userId).maybeSingle();
+d1Membership.data?.unit_id === unit3B.data.id ? ok('D1 quedo asignado al Piso 3 Depto B') : fail('D1 deberia tener el unit_id de la invitacion', JSON.stringify(d1Membership));
+
 console.log('\nlimpiando...');
 await admin.from('buildings').delete().in('id', [bA.data.id, bC.data.id]);
 await admin.auth.admin.deleteUser(a1.userId);
 await admin.auth.admin.deleteUser(b1.userId);
 await admin.auth.admin.deleteUser(c1.userId);
 await admin.auth.admin.deleteUser(future.userId);
+await admin.auth.admin.deleteUser(d1.userId);
 
 console.log('');
 if (failures > 0) { console.error(failures + ' verificacion(es) fallaron.'); process.exit(1); }

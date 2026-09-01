@@ -22,11 +22,11 @@
         <h2 class="text-lg font-semibold text-slate-900">Invitar un vecino</h2>
         <p class="mt-1 text-sm text-slate-500">
           Cargá el mail. Si ya tiene cuenta se suma al edificio al toque; si no, queda pendiente hasta que se
-          registre o inicie sesión con ese mail. Avisale vos por fuera de la app (no se envía ningún mail).
+          registre o inicie sesión con ese mail. Piso y depto son opcionales, y se pueden corregir después.
         </p>
 
         <form [formGroup]="inviteForm" (ngSubmit)="invite()" class="mt-4 flex flex-wrap items-end gap-3">
-          <div class="flex-1">
+          <div class="flex-1 basis-full sm:basis-auto">
             <label for="email" class="block text-xs font-medium text-slate-700">Mail</label>
             <input
               id="email"
@@ -47,6 +47,28 @@
               <option value="resident">Vecino</option>
               <option value="admin">Administrador</option>
             </select>
+          </div>
+
+          <div class="w-20">
+            <label for="floor" class="block text-xs font-medium text-slate-700">Piso</label>
+            <input
+              id="floor"
+              type="text"
+              formControlName="floor"
+              placeholder="3"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            />
+          </div>
+
+          <div class="w-24">
+            <label for="unitLabel" class="block text-xs font-medium text-slate-700">Depto</label>
+            <input
+              id="unitLabel"
+              type="text"
+              formControlName="unitLabel"
+              placeholder="B"
+              class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            />
           </div>
 
           <button
@@ -71,17 +93,67 @@
           <h2 class="text-lg font-semibold text-slate-900">Invitaciones pendientes</h2>
           <ul class="mt-3 space-y-2">
             @for (inv of invitations(); track inv.id) {
-              <li class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                <span class="text-slate-700">
-                  {{ inv.email }} · {{ inv.role === 'admin' ? 'Administrador' : 'Vecino' }}
-                </span>
-                <button
-                  type="button"
-                  (click)="cancelInvitation(inv.id)"
-                  class="text-xs font-medium text-red-600 hover:underline"
-                >
-                  Cancelar
-                </button>
+              <li class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <p class="text-slate-700">{{ inv.email }} · {{ inv.role === 'admin' ? 'Administrador' : 'Vecino' }}</p>
+                    <p class="text-xs text-slate-500">{{ unitLabel(inv.floor, inv.unitLabel) }}</p>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-3">
+                    <button
+                      type="button"
+                      (click)="startEditInvitationUnit(inv)"
+                      class="text-xs font-medium text-teal-700 hover:underline"
+                    >
+                      Editar unidad
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelInvitation(inv.id)"
+                      class="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+
+                @if (editingInvitationId() === inv.id) {
+                  <form [formGroup]="unitForm" (ngSubmit)="saveUnit()" class="mt-3 flex flex-wrap items-end gap-2">
+                    <div class="w-20">
+                      <label class="block text-xs font-medium text-slate-700">Piso</label>
+                      <input
+                        type="text"
+                        formControlName="floor"
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+                    <div class="w-24">
+                      <label class="block text-xs font-medium text-slate-700">Depto</label>
+                      <input
+                        type="text"
+                        formControlName="unitLabel"
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      [disabled]="savingUnit()"
+                      class="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelEditUnit()"
+                      class="text-xs font-medium text-slate-500 hover:underline"
+                    >
+                      Cancelar
+                    </button>
+                  </form>
+                  @if (unitError()) {
+                    <p class="mt-2 text-xs text-red-600">{{ unitError() }}</p>
+                  }
+                }
               </li>
             }
           </ul>
@@ -95,11 +167,63 @@
         } @else {
           <ul class="mt-3 space-y-2">
             @for (m of members(); track m.id) {
-              <li class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                <span class="text-slate-700">{{ m.fullName }}</span>
-                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {{ m.role === 'admin' ? 'Administrador' : 'Vecino' }}
-                </span>
+              <li class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <p class="text-slate-700">{{ m.fullName }}</p>
+                    <p class="text-xs text-slate-500">{{ unitLabel(m.floor, m.unitLabel) }}</p>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-3">
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                      {{ m.role === 'admin' ? 'Administrador' : 'Vecino' }}
+                    </span>
+                    <button
+                      type="button"
+                      (click)="startEditMemberUnit(m)"
+                      class="text-xs font-medium text-teal-700 hover:underline"
+                    >
+                      Editar unidad
+                    </button>
+                  </div>
+                </div>
+
+                @if (editingMemberId() === m.id) {
+                  <form [formGroup]="unitForm" (ngSubmit)="saveUnit()" class="mt-3 flex flex-wrap items-end gap-2">
+                    <div class="w-20">
+                      <label class="block text-xs font-medium text-slate-700">Piso</label>
+                      <input
+                        type="text"
+                        formControlName="floor"
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+                    <div class="w-24">
+                      <label class="block text-xs font-medium text-slate-700">Depto</label>
+                      <input
+                        type="text"
+                        formControlName="unitLabel"
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      [disabled]="savingUnit()"
+                      class="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelEditUnit()"
+                      class="text-xs font-medium text-slate-500 hover:underline"
+                    >
+                      Cancelar
+                    </button>
+                  </form>
+                  @if (unitError()) {
+                    <p class="mt-2 text-xs text-red-600">{{ unitError() }}</p>
+                  }
+                }
               </li>
             }
           </ul>
