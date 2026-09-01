@@ -9,7 +9,8 @@
     "test": "ng test",
     "test:rls": "node scripts/test-rls-isolation.mjs",
     "test:reservations": "node scripts/test-reservations-flow.mjs",
-    "test:rules": "node scripts/test-reservation-rules.mjs"
+    "test:rules": "node scripts/test-reservation-rules.mjs",
+    "test:dashboard": "node scripts/test-dashboard-rls.mjs"
   },
   "private": true,
   "packageManager": "npm@11.12.1",
