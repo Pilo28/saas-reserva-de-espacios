@@ -1,5 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { asError } from './supabase-error';
 
 export interface DashboardReservation {
   id: string;
@@ -73,9 +74,9 @@ export class DashboardService {
         .order('cancelled_at', { ascending: false }),
     ]);
 
-    if (spacesRes.error) throw spacesRes.error;
-    if (upcomingRes.error) throw upcomingRes.error;
-    if (cancelledRes.error) throw cancelledRes.error;
+    if (spacesRes.error) throw asError(spacesRes.error);
+    if (upcomingRes.error) throw asError(upcomingRes.error);
+    if (cancelledRes.error) throw asError(cancelledRes.error);
 
     type ReservationRow = {
       id: string;
@@ -105,7 +106,7 @@ export class DashboardService {
     const emailsByUserId = new Map<string, string>();
     if (userIds.length > 0) {
       const profilesRes = await this.supabase.from('profiles').select('id, full_name').in('id', userIds);
-      if (profilesRes.error) throw profilesRes.error;
+      if (profilesRes.error) throw asError(profilesRes.error);
       for (const row of profilesRes.data ?? []) {
         namesByUserId.set(row.id, row.full_name ?? 'Vecino');
       }
@@ -115,7 +116,7 @@ export class DashboardService {
         .select('user_id, units(floor, label)')
         .eq('building_id', buildingId)
         .in('user_id', userIds);
-      if (membersRes.error) throw membersRes.error;
+      if (membersRes.error) throw asError(membersRes.error);
       for (const row of (membersRes.data ?? []) as unknown as {
         user_id: string;
         units: { floor: string | null; label: string } | null;

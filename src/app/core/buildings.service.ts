@@ -2,6 +2,7 @@ import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
 import { UnitsService, type UnitInput } from './units.service';
+import { asError } from './supabase-error';
 
 export interface Building {
   id: string;
@@ -49,7 +50,7 @@ export class BuildingsService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) throw asError(error);
 
     return (data ?? [])
       .filter((row) => row.buildings)
@@ -69,7 +70,7 @@ export class BuildingsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as Building;
   }
 
@@ -80,7 +81,7 @@ export class BuildingsService {
       .eq('id', id)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as Building | null;
   }
 
@@ -95,7 +96,7 @@ export class BuildingsService {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return (data?.role as BuildingRole | undefined) ?? null;
   }
 
@@ -106,7 +107,7 @@ export class BuildingsService {
       .eq('building_id', buildingId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) throw asError(error);
 
     const rows = (data ?? []) as unknown as {
       id: string;
@@ -119,7 +120,7 @@ export class BuildingsService {
     const namesByUserId = new Map<string, string>();
     if (userIds.length > 0) {
       const profilesRes = await this.supabase.from('profiles').select('id, full_name').in('id', userIds);
-      if (profilesRes.error) throw profilesRes.error;
+      if (profilesRes.error) throw asError(profilesRes.error);
       for (const p of profilesRes.data ?? []) {
         namesByUserId.set(p.id, p.full_name ?? 'Vecino');
       }
@@ -150,13 +151,13 @@ export class BuildingsService {
 
   async removeMember(memberId: string): Promise<void> {
     const { error } = await this.supabase.from('building_members').delete().eq('id', memberId);
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   async updateMemberUnit(memberId: string, buildingId: string, unit: UnitInput): Promise<void> {
     const unitId = await this.units.findOrCreate(buildingId, unit);
     const { error } = await this.supabase.from('building_members').update({ unit_id: unitId }).eq('id', memberId);
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   async updateMemberEmail(buildingId: string, memberId: string, newEmail: string): Promise<void> {
@@ -164,7 +165,7 @@ export class BuildingsService {
       body: { buildingId, memberId, newEmail },
     });
 
-    if (error) throw error;
+    if (error) throw asError(error);
     if (data?.error) throw new Error(data.error);
   }
 
@@ -176,7 +177,7 @@ export class BuildingsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as Building;
   }
 }

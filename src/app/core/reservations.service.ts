@@ -1,6 +1,7 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
+import { asError } from './supabase-error';
 
 export type ReservationStatus = 'confirmed' | 'cancelled';
 
@@ -60,7 +61,7 @@ export class ReservationsService {
       .lt('starts_at', dayEnd.toISOString())
       .order('starts_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) throw asError(error);
 
     const rows = (data ?? []) as { id: string; starts_at: string; ends_at: string; status: ReservationStatus; user_id: string }[];
     const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
@@ -69,7 +70,7 @@ export class ReservationsService {
     const unitInfoByUserId = new Map<string, string>();
     if (userIds.length > 0) {
       const profilesRes = await this.supabase.from('profiles').select('id, full_name').in('id', userIds);
-      if (profilesRes.error) throw profilesRes.error;
+      if (profilesRes.error) throw asError(profilesRes.error);
       for (const p of profilesRes.data ?? []) {
         namesByUserId.set(p.id, p.full_name ?? 'Vecino');
       }
@@ -79,7 +80,7 @@ export class ReservationsService {
         .select('user_id, units(floor, label)')
         .eq('building_id', buildingId)
         .in('user_id', userIds);
-      if (membersRes.error) throw membersRes.error;
+      if (membersRes.error) throw asError(membersRes.error);
       for (const m of (membersRes.data ?? []) as unknown as {
         user_id: string;
         units: { floor: string | null; label: string } | null;
@@ -124,7 +125,7 @@ export class ReservationsService {
       if (error.code === OVERLAP_ERROR_CODE) {
         throw new Error('Ese horario ya está reservado. Elegí otro.');
       }
-      throw error;
+      throw asError(error);
     }
 
     return data as Reservation;
@@ -142,7 +143,7 @@ export class ReservationsService {
       .eq('user_id', userId)
       .order('starts_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) throw asError(error);
 
     return (data ?? []).map((row) => {
       const { spaces, buildings, ...rest } = row as unknown as Reservation & {
@@ -166,6 +167,6 @@ export class ReservationsService {
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_by: userId })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 }

@@ -3,6 +3,7 @@ import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
 import { UnitsService, type UnitInput } from './units.service';
 import type { BuildingRole } from './buildings.service';
+import { asError } from './supabase-error';
 
 export type InvitationStatus = 'pending' | 'accepted' | 'cancelled';
 
@@ -45,7 +46,7 @@ export class InvitationsService {
       .eq('building_id', buildingId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return (data ?? []).map((row) => this.toInvitation(row as unknown as InvitationRow));
   }
 
@@ -75,7 +76,7 @@ export class InvitationsService {
       if (error.code === '23505') {
         throw new Error('Ya hay una invitación pendiente para ese mail en este edificio.');
       }
-      throw error;
+      throw asError(error);
     }
 
     const invitation = this.toInvitation(data as unknown as InvitationRow);
@@ -91,7 +92,7 @@ export class InvitationsService {
       .update({ unit_id: unitId })
       .eq('id', invitationId);
 
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   private async sendInvitationEmail(buildingId: string, email: string): Promise<boolean> {
@@ -126,7 +127,7 @@ export class InvitationsService {
       .update({ status: 'cancelled' })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   async acceptPending(): Promise<void> {

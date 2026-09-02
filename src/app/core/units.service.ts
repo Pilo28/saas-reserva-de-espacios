@@ -1,5 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { asError } from './supabase-error';
 
 export interface UnitInput {
   floor: string;
@@ -21,7 +22,7 @@ export class UnitsService {
     query = floor === null ? query.is('floor', null) : query.eq('floor', floor);
 
     const { data: existing, error: selectError } = await query.maybeSingle();
-    if (selectError) throw selectError;
+    if (selectError) throw asError(selectError);
     if (existing) return existing.id;
 
     const { data: created, error: insertError } = await this.supabase
@@ -30,7 +31,7 @@ export class UnitsService {
       .select('id')
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) throw asError(insertError);
     return created.id;
   }
 }

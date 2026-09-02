@@ -1,5 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { asError } from './supabase-error';
 
 export type NotificationType = 'reservation_created' | 'reservation_cancelled' | 'reservation_reminder';
 
@@ -46,7 +47,7 @@ export class NotificationsService {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (error) throw error;
+    if (error) throw asError(error);
 
     return (data ?? []).map((row) => {
       const r = row as unknown as NotificationRow;
@@ -69,7 +70,7 @@ export class NotificationsService {
       .select('id', { count: 'exact', head: true })
       .is('read_at', null);
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return count ?? 0;
   }
 
@@ -79,7 +80,7 @@ export class NotificationsService {
       .update({ read_at: new Date().toISOString() })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   async markAllRead(): Promise<void> {
@@ -88,7 +89,7 @@ export class NotificationsService {
       .update({ read_at: new Date().toISOString() })
       .is('read_at', null);
 
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   messageFor(n: AppNotification): string {

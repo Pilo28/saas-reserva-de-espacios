@@ -1,5 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { asError } from './supabase-error';
 
 export interface Space {
   id: string;
@@ -65,7 +66,7 @@ export class SpacesService {
       .eq('building_id', buildingId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return (data ?? []) as Space[];
   }
 
@@ -81,7 +82,7 @@ export class SpacesService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as Space;
   }
 
@@ -92,7 +93,7 @@ export class SpacesService {
       .eq('id', id)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as Space | null;
   }
 
@@ -109,7 +110,7 @@ export class SpacesService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as Space;
   }
 
@@ -121,7 +122,7 @@ export class SpacesService {
       .order('weekday', { ascending: true })
       .order('opens_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return (data ?? []) as SpaceSchedule[];
   }
 
@@ -142,13 +143,13 @@ export class SpacesService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as SpaceSchedule;
   }
 
   async removeSchedule(id: string): Promise<void> {
     const { error } = await this.supabase.from('space_schedules').delete().eq('id', id);
-    if (error) throw error;
+    if (error) throw asError(error);
   }
 
   async getRules(spaceId: string): Promise<SpaceRules | null> {
@@ -160,7 +161,7 @@ export class SpacesService {
       .eq('space_id', spaceId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as SpaceRules | null;
   }
 
@@ -179,7 +180,7 @@ export class SpacesService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw asError(error);
     return data as SpaceRules;
   }
 }
