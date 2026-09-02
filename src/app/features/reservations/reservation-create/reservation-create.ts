@@ -33,8 +33,6 @@ export class ReservationCreate {
 
   protected readonly form = this.fb.group({
     date: [todayDateString(), [Validators.required]],
-    startTime: ['18:00', [Validators.required]],
-    endTime: ['22:00', [Validators.required]],
     guestsCount: this.fb.control<number | null>(null),
     notes: [''],
   });
@@ -46,6 +44,10 @@ export class ReservationCreate {
   protected readonly rules = signal<SpaceRules | null>(null);
   protected readonly myActiveReservations = signal<Reservation[]>([]);
   protected readonly schedules = signal<SpaceSchedule[] | null>(null);
+
+  // Solo importa cuando el dia elegido tiene mas de un horario configurado -- ahi hay que
+  // elegir cual. Si el dia tiene uno solo (el caso comun), se usa directo sin preguntar.
+  protected readonly selectedScheduleId = signal<string | null>(null);
 
   // La regla "maximo de reservas activas" no es por dia: cuenta cualquier reserva
   // confirmada y no terminada del usuario en este espacio, sin importar la fecha. Si ya
@@ -60,29 +62,40 @@ export class ReservationCreate {
 
   private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
 
-  // Chequeo proactivo de los horarios de disponibilidad configurados por el admin (mismo
-  // criterio que ahora aplica la base con enforce_reservation_schedule): sin esto, el
-  // usuario completaba fecha/horario fuera de ventana y recien se enteraba al confirmar.
+  // El vecino ya no elige un horario libre: reserva es SIEMPRE la ventana que configuro el
+  // admin para ese dia (Fase 5). Si el dia tiene varias ventanas cargadas, se elige una; si
+  // tiene una sola, se usa esa directo.
+  protected readonly daySchedules = computed(() => {
+    const schedules = this.schedules();
+    const date = this.formValue().date;
+    if (!schedules || !date) return [];
+    const weekday = new Date(`${date}T00:00:00`).getDay();
+    return schedules.filter((s) => s.weekday === weekday);
+  });
+
+  protected readonly selectedSchedule = computed(() => {
+    const options = this.daySchedules();
+    if (options.length === 0) return null;
+    const manual = options.find((s) => s.id === this.selectedScheduleId());
+    return manual ?? options[0];
+  });
+
+  // Chequeo proactivo (mismo criterio que ahora aplica la base con
+  // enforce_reservation_schedule): sin esto, el vecino elegia una fecha sin horario
+  // configurado y recien se enteraba al confirmar.
   protected readonly scheduleWarning = computed(() => {
     const schedules = this.schedules();
     if (schedules === null) return null;
-
-    const { date, startTime, endTime } = this.formValue();
-    if (!date || !startTime || !endTime) return null;
 
     if (schedules.length === 0) {
       return 'Este espacio todavía no tiene horarios de disponibilidad configurados. Pedile al administrador que cargue al menos uno antes de reservar.';
     }
 
-    const weekday = new Date(`${date}T00:00:00`).getDay();
-    const matches = schedules.some(
-      (s) =>
-        s.weekday === weekday &&
-        toMinutes(s.opens_at) <= toMinutes(startTime) &&
-        toMinutes(s.closes_at) >= toMinutes(endTime),
-    );
+    if (this.daySchedules().length === 0) {
+      return 'Este espacio no está disponible para reservar ese día.';
+    }
 
-    return matches ? null : 'Este espacio no está disponible para reservar ese día u horario.';
+    return null;
   });
 
   constructor() {
@@ -152,8 +165,25 @@ export class ReservationCreate {
     return `${date} · ${this.slotTime(r.starts_at)} a ${this.slotTime(r.ends_at)}`;
   }
 
+  // "20:00:00" -> "20:00". La ventana cruza medianoche cuando cierra a una hora del reloj
+  // menor o igual a la que abre (ej. abre 20:00, cierra 03:00 del dia siguiente).
+  protected formatWindow(s: SpaceSchedule): string {
+    const overnight = toMinutes(s.closes_at) <= toMinutes(s.opens_at);
+    return `${s.opens_at.slice(0, 5)} a ${s.closes_at.slice(0, 5)}${overnight ? ' (del día siguiente)' : ''}`;
+  }
+
+  private reservationTimesFor(date: string, schedule: SpaceSchedule): { startsAt: Date; endsAt: Date } {
+    const startsAt = new Date(`${date}T${schedule.opens_at}`);
+    let endsAt = new Date(`${date}T${schedule.closes_at}`);
+    if (endsAt <= startsAt) {
+      endsAt = new Date(endsAt.getTime() + 24 * 60 * 60 * 1000);
+    }
+    return { startsAt, endsAt };
+  }
+
   protected async submit(): Promise<void> {
-    if (this.blockingReservations().length > 0 || this.scheduleWarning()) {
+    const schedule = this.selectedSchedule();
+    if (this.blockingReservations().length > 0 || this.scheduleWarning() || !schedule) {
       return;
     }
 
@@ -162,14 +192,8 @@ export class ReservationCreate {
       return;
     }
 
-    const { date, startTime, endTime, guestsCount, notes } = this.form.getRawValue();
-    const startsAt = new Date(`${date}T${startTime}:00`);
-    const endsAt = new Date(`${date}T${endTime}:00`);
-
-    if (endsAt <= startsAt) {
-      this.errorMessage.set('El horario de fin debe ser posterior al de inicio.');
-      return;
-    }
+    const { date, guestsCount, notes } = this.form.getRawValue();
+    const { startsAt, endsAt } = this.reservationTimesFor(date, schedule);
 
     this.submitting.set(true);
     this.errorMessage.set('');

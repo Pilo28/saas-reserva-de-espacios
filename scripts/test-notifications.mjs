@@ -41,6 +41,17 @@ async function newUser(label) {
 
 const isoInMinutes = (m) => new Date(Date.now() + m * 60_000).toISOString();
 
+// enforce_reservation_schedule (agregada al probar en vivo) exige que la reserva caiga
+// dentro de un horario configurado. La reserva del test 1 necesita EXITO y no le importa
+// la hora exacta (solo que genere la notificacion), asi que se fija lejos de cualquier
+// medianoche para no depender de en que momento del dia se corra el script.
+function safeSlot(hoursFromNow, durationHours) {
+  const start = new Date(Date.now() + hoursFromNow * 3600_000);
+  start.setUTCHours(15, 0, 0, 0); // mediodia en Argentina (UTC-3), lejos de cualquier medianoche
+  const end = new Date(start.getTime() + durationHours * 3600_000);
+  return { startsAt: start.toISOString(), endsAt: end.toISOString(), weekday: start.getUTCDay() };
+}
+
 console.log('setup...');
 const a1 = await newUser('a1'); // admin del edificio
 const a2 = await newUser('a2'); // vecino
@@ -55,7 +66,10 @@ const space = await a1.client.from('spaces').insert({ building_id: bA.data.id, n
 if (space.error) throw space.error;
 
 console.log('\n1. crear una reserva genera una notificacion...');
-const res1 = await a2.client.from('reservations').insert({ building_id: bA.data.id, space_id: space.data.id, user_id: a2.userId, starts_at: isoInMinutes(120), ends_at: isoInMinutes(180) }).select().single();
+const res1Slot = safeSlot(24, 1);
+const res1Schedule = await a1.client.from('space_schedules').insert({ building_id: bA.data.id, space_id: space.data.id, weekday: res1Slot.weekday, opens_at: '00:00:01', closes_at: '23:59:00' });
+if (res1Schedule.error) throw res1Schedule.error;
+const res1 = await a2.client.from('reservations').insert({ building_id: bA.data.id, space_id: space.data.id, user_id: a2.userId, starts_at: res1Slot.startsAt, ends_at: res1Slot.endsAt }).select().single();
 if (res1.error) throw res1.error;
 
 const createdNotif = await a2.client.from('notifications').select('id, type').eq('reservation_id', res1.data.id).eq('type', 'reservation_created').maybeSingle();

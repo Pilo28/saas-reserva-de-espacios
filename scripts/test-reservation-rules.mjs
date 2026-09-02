@@ -42,6 +42,18 @@ async function newUser(label) {
 const isoInHours = (h) => new Date(Date.now() + h * 3600_000).toISOString();
 const isoInDays = (d) => new Date(Date.now() + d * 86_400_000).toISOString();
 
+// enforce_reservation_schedule (agregada al probar en vivo) exige que la reserva caiga
+// dentro de un horario configurado. Esta suite prueba las reglas de anticipacion/duracion,
+// no los horarios, asi que el unico caso que necesita EXITO (test 4, "reserva valida") se
+// fija a una hora lejos de cualquier medianoche -- para no depender de en que momento del
+// dia se corra el script -- y se habilita ese dia entero.
+function safeSlot(hoursFromNow, durationHours) {
+  const start = new Date(Date.now() + hoursFromNow * 3600_000);
+  start.setUTCHours(15, 0, 0, 0); // mediodia en Argentina (UTC-3), lejos de cualquier medianoche
+  const end = new Date(start.getTime() + durationHours * 3600_000);
+  return { startsAt: start.toISOString(), endsAt: end.toISOString(), weekday: start.getUTCDay() };
+}
+
 console.log('setup...');
 const a1 = await newUser('a1'); // admin/creator del edificio
 const a2 = await newUser('a2'); // vecino
@@ -79,8 +91,11 @@ const tooFar = await a2.client.from('reservations').insert({ building_id: bA.dat
 tooFar.error ? ok('vecino no puede reservar con 60 dias de anticipacion (maximo 30)') : fail('deberia haber rechazado por anticipacion maxima');
 
 console.log('\n4. reserva valida dentro de todos los limites...');
-const good = await a2.client.from('reservations').insert({ building_id: bA.data.id, space_id: space.data.id, user_id: a2.userId, starts_at: isoInHours(100), ends_at: isoInHours(102) }).select().single();
-good.error ? fail('deberia poder reservar 2hs con 100hs de anticipacion', JSON.stringify(good.error)) : ok('vecino reserva 2hs con 100hs de anticipacion (dentro de todos los limites)');
+const goodSlot = safeSlot(100, 2);
+const goodSchedule = await a1.client.from('space_schedules').insert({ building_id: bA.data.id, space_id: space.data.id, weekday: goodSlot.weekday, opens_at: '00:00:01', closes_at: '23:59:00' });
+if (goodSchedule.error) throw goodSchedule.error;
+const good = await a2.client.from('reservations').insert({ building_id: bA.data.id, space_id: space.data.id, user_id: a2.userId, starts_at: goodSlot.startsAt, ends_at: goodSlot.endsAt }).select().single();
+good.error ? fail('deberia poder reservar 2hs con ~100hs de anticipacion', JSON.stringify(good.error)) : ok('vecino reserva 2hs con ~100hs de anticipacion (dentro de todos los limites)');
 
 console.log('\n5. maximo de reservas activas...');
 const second = await a2.client.from('reservations').insert({ building_id: bA.data.id, space_id: space.data.id, user_id: a2.userId, starts_at: isoInHours(150), ends_at: isoInHours(152) });

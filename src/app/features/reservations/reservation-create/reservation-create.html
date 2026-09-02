@@ -80,29 +80,34 @@
           }
         </div>
 
-        <div class="flex gap-3">
-          <div class="flex-1">
-            <label for="startTime" class="block text-sm font-medium text-slate-700">Desde</label>
-            <input
-              id="startTime"
-              type="time"
-              formControlName="startTime"
-              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
-            />
-          </div>
-          <div class="flex-1">
-            <label for="endTime" class="block text-sm font-medium text-slate-700">Hasta</label>
-            <input
-              id="endTime"
-              type="time"
-              formControlName="endTime"
-              class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
-            />
-          </div>
-        </div>
-
         @if (scheduleWarning(); as warning) {
           <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ warning }}</p>
+        } @else if (daySchedules().length === 1) {
+          <div>
+            <p class="block text-sm font-medium text-slate-700">Horario</p>
+            <p class="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              {{ formatWindow(daySchedules()[0]) }}
+            </p>
+          </div>
+        } @else if (daySchedules().length > 1) {
+          <div>
+            <p class="block text-sm font-medium text-slate-700">Horario</p>
+            <div class="mt-1 space-y-1">
+              @for (s of daySchedules(); track s.id) {
+                <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                  <input
+                    type="radio"
+                    name="selectedSchedule"
+                    [value]="s.id"
+                    [checked]="selectedSchedule()?.id === s.id"
+                    (change)="selectedScheduleId.set(s.id)"
+                    class="h-4 w-4 border-slate-300 text-teal-700"
+                  />
+                  {{ formatWindow(s) }}
+                </label>
+              }
+            </div>
+          </div>
         }
 
         <div>
@@ -134,7 +139,7 @@
 
         <button
           type="submit"
-          [disabled]="submitting() || blockingReservations().length > 0"
+          [disabled]="submitting() || blockingReservations().length > 0 || !!scheduleWarning() || !selectedSchedule()"
           class="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
         >
           {{ submitting() ? 'Reservando…' : 'Confirmar reserva' }}

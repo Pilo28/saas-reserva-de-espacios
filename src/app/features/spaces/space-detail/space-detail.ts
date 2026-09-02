@@ -121,6 +121,10 @@ export class SpaceDetail implements OnInit {
     }
   }
 
+  protected isOvernight(schedule: SpaceSchedule): boolean {
+    return schedule.closes_at <= schedule.opens_at;
+  }
+
   protected async addSchedule(): Promise<void> {
     if (this.scheduleForm.invalid) {
       this.scheduleForm.markAllAsTouched();
@@ -128,8 +132,8 @@ export class SpaceDetail implements OnInit {
     }
 
     const { weekday, opensAt, closesAt } = this.scheduleForm.getRawValue();
-    if (opensAt >= closesAt) {
-      this.scheduleError.set('El horario de cierre debe ser posterior al de apertura.');
+    if (opensAt === closesAt) {
+      this.scheduleError.set('El horario de apertura y cierre no pueden ser iguales.');
       return;
     }
 

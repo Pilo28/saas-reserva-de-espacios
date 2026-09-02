@@ -64,6 +64,13 @@ day.setUTCDate(day.getUTCDate() + 7);
 const dateStr = day.toISOString().slice(0, 10);
 const range = (h1, h2) => [`${dateStr}T${String(h1).padStart(2, '0')}:00:00Z`, `${dateStr}T${String(h2).padStart(2, '0')}:00:00Z`];
 
+// enforce_reservation_schedule (agregada al probar en vivo) exige un horario de
+// disponibilidad configurado; este script prueba el exclusion constraint, no los
+// horarios, asi que se habilita todo el dia elegido para no interferir.
+const scheduleWeekday = day.getUTCDay();
+const daySchedule = await a1.client.from('space_schedules').insert({ building_id: bA.data.id, space_id: spaceA.data.id, weekday: scheduleWeekday, opens_at: '00:00:01', closes_at: '23:59:00' });
+if (daySchedule.error) throw daySchedule.error;
+
 console.log('\n1. anti-doble-reserva...');
 const [s1, e1] = range(18, 22);
 const res1 = await a2.client.from('reservations').insert({ building_id: bA.data.id, space_id: spaceA.data.id, user_id: a2.userId, starts_at: s1, ends_at: e1 }).select().single();
