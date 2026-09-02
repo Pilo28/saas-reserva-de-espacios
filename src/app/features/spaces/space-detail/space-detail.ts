@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { SpacesService, type SpaceRules, type SpaceSchedule } from '../../../core/spaces.service';
 import { BuildingsService } from '../../../core/buildings.service';
+import { ReservationsService, type ReservationSlot } from '../../../core/reservations.service';
 
 @Component({
   selector: 'app-space-detail',
@@ -13,6 +14,7 @@ export class SpaceDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly buildingsService = inject(BuildingsService);
+  private readonly reservationsService = inject(ReservationsService);
   protected readonly spacesService = inject(SpacesService);
 
   protected readonly buildingId = this.route.snapshot.paramMap.get('id')!;
@@ -55,6 +57,11 @@ export class SpaceDetail implements OnInit {
   protected readonly rulesSaving = signal(false);
   protected readonly rulesSaved = signal(false);
   protected readonly rulesError = signal('');
+
+  protected readonly showReservations = signal(false);
+  protected readonly loadingReservations = signal(false);
+  protected readonly reservationsError = signal('');
+  protected readonly upcomingReservations = signal<ReservationSlot[] | null>(null);
 
   async ngOnInit(): Promise<void> {
     try {
@@ -123,6 +130,34 @@ export class SpaceDetail implements OnInit {
 
   protected isOvernight(schedule: SpaceSchedule): boolean {
     return schedule.closes_at <= schedule.opens_at;
+  }
+
+  protected async openReservations(): Promise<void> {
+    this.showReservations.set(true);
+    if (this.upcomingReservations() !== null) return;
+
+    this.loadingReservations.set(true);
+    this.reservationsError.set('');
+    try {
+      this.upcomingReservations.set(
+        await this.reservationsService.listUpcomingForSpace(this.spaceId, this.buildingId),
+      );
+    } catch (error) {
+      this.reservationsError.set(error instanceof Error ? error.message : 'No se pudieron cargar las reservas.');
+    } finally {
+      this.loadingReservations.set(false);
+    }
+  }
+
+  protected closeReservations(): void {
+    this.showReservations.set(false);
+  }
+
+  protected reservationDateRange(r: ReservationSlot): string {
+    const date = new Date(r.starts_at).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+    const from = new Date(r.starts_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const to = new Date(r.ends_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    return `${date} · ${from} a ${to}`;
   }
 
   protected async addSchedule(): Promise<void> {

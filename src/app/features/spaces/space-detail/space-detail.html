@@ -17,12 +17,21 @@
             <p class="text-xs font-mono uppercase tracking-wide text-teal-700">Reserva de Espacios</p>
             <h1 class="mt-2 text-2xl font-semibold text-slate-900">{{ form.controls.name.value }}</h1>
           </div>
-          <a
-            [routerLink]="['/buildings', buildingId, 'spaces', spaceId, 'reserve']"
-            class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
-          >
-            Reservar
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              (click)="openReservations()"
+              class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Ver reservas
+            </button>
+            <a
+              [routerLink]="['/buildings', buildingId, 'spaces', spaceId, 'reserve']"
+              class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+            >
+              Reservar
+            </a>
+          </div>
         </div>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4">
@@ -262,6 +271,43 @@
               </button>
             </div>
           </form>
+        </div>
+      }
+
+      @if (showReservations()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div class="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-lg">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-slate-900">Reservas de {{ form.controls.name.value }}</h3>
+              <button
+                type="button"
+                (click)="closeReservations()"
+                class="text-slate-400 hover:text-slate-600"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            @if (loadingReservations()) {
+              <p class="mt-4 text-sm text-slate-500">Cargando…</p>
+            } @else if (reservationsError()) {
+              <p class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ reservationsError() }}</p>
+            } @else if (upcomingReservations()?.length === 0) {
+              <p class="mt-4 text-sm text-slate-500">No hay reservas próximas para este espacio.</p>
+            } @else {
+              <ul class="mt-4 space-y-2">
+                @for (r of upcomingReservations(); track r.id) {
+                  <li class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <p class="text-slate-700">{{ reservationDateRange(r) }}</p>
+                    <p class="text-xs text-slate-500">
+                      {{ r.userName }}@if (r.unitInfo) {<span> · {{ r.unitInfo }}</span>}
+                    </p>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
         </div>
       }
     }

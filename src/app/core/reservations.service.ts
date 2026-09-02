@@ -62,8 +62,28 @@ export class ReservationsService {
       .order('starts_at', { ascending: true });
 
     if (error) throw asError(error);
+    return this.enrichSlots(data ?? [], buildingId);
+  }
 
-    const rows = (data ?? []) as { id: string; starts_at: string; ends_at: string; status: ReservationStatus; user_id: string }[];
+  /** Reservas confirmadas y futuras de este espacio, en cualquier fecha (no un dia puntual)
+   * -- para un vistazo rapido de "que hay reservado" sin tener que ir fecha por fecha. */
+  async listUpcomingForSpace(spaceId: string, buildingId: string): Promise<ReservationSlot[]> {
+    const { data, error } = await this.supabase
+      .from('reservation_slots')
+      .select('id, starts_at, ends_at, status, user_id')
+      .eq('space_id', spaceId)
+      .gt('ends_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(50);
+
+    if (error) throw asError(error);
+    return this.enrichSlots(data ?? [], buildingId);
+  }
+
+  private async enrichSlots(
+    rows: { id: string; starts_at: string; ends_at: string; status: ReservationStatus; user_id: string }[],
+    buildingId: string,
+  ): Promise<ReservationSlot[]> {
     const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
 
     const namesByUserId = new Map<string, string>();
