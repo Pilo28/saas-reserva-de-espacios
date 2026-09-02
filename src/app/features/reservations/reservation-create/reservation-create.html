@@ -31,6 +31,24 @@
         </div>
       }
 
+      @if (blockingReservations().length > 0) {
+        <div class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+          <p class="font-medium">No podés reservar este espacio ahora</p>
+          <p class="mt-1">
+            Ya tenés {{ blockingReservations().length }} reserva(s) activa(s) acá, el máximo permitido. Cancelala
+            para poder reservar de nuevo:
+          </p>
+          <ul class="mt-1 list-inside list-disc space-y-0.5">
+            @for (r of blockingReservations(); track r.id) {
+              <li>{{ reservationDateRange(r) }}</li>
+            }
+          </ul>
+          <a routerLink="/reservations" class="mt-2 inline-block font-medium text-red-800 hover:underline">
+            Ir a Mis reservas
+          </a>
+        </div>
+      }
+
       <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4">
         <div>
           <label for="date" class="block text-sm font-medium text-slate-700">Fecha</label>
@@ -112,7 +130,7 @@
 
         <button
           type="submit"
-          [disabled]="submitting()"
+          [disabled]="submitting() || blockingReservations().length > 0"
           class="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
         >
           {{ submitting() ? 'Reservando…' : 'Confirmar reserva' }}

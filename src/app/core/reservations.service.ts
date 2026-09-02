@@ -103,6 +103,27 @@ export class ReservationsService {
     }));
   }
 
+  /** Reservas confirmadas y todavia no terminadas del usuario actual para este espacio,
+   * en CUALQUIER fecha -- es lo que cuenta space_rules.max_active_reservations_per_user
+   * (no es "por dia"), asi que hace falta mostrarlo antes de que el usuario intente
+   * reservar en una fecha sin conflicto y se encuentre con el rechazo recien al confirmar. */
+  async listMyActiveForSpace(spaceId: string): Promise<Reservation[]> {
+    const userId = this.auth.user()?.id;
+    if (!userId) return [];
+
+    const { data, error } = await this.supabase
+      .from('reservations')
+      .select('id, building_id, space_id, user_id, starts_at, ends_at, status, guests_count, notes, created_at')
+      .eq('space_id', spaceId)
+      .eq('user_id', userId)
+      .eq('status', 'confirmed')
+      .gt('ends_at', new Date().toISOString())
+      .order('starts_at', { ascending: true });
+
+    if (error) throw asError(error);
+    return (data ?? []) as Reservation[];
+  }
+
   async create(input: ReservationInput): Promise<Reservation> {
     const userId = this.auth.user()?.id;
     if (!userId) throw new Error('No hay sesión activa.');

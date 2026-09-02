@@ -1,8 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ReservationsService, type ReservationSlot } from '../../../core/reservations.service';
+import { ReservationsService, type Reservation, type ReservationSlot } from '../../../core/reservations.service';
 import { SpacesService, type SpaceRules } from '../../../core/spaces.service';
 
 function todayDateString(): string {
@@ -39,10 +39,23 @@ export class ReservationCreate {
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly rules = signal<SpaceRules | null>(null);
+  protected readonly myActiveReservations = signal<Reservation[]>([]);
+
+  // La regla "maximo de reservas activas" no es por dia: cuenta cualquier reserva
+  // confirmada y no terminada del usuario en este espacio, sin importar la fecha. Si ya
+  // llego al limite, conviene avisarle y bloquear el boton antes de que elija una fecha
+  // sin conflicto y se encuentre con el rechazo recien al confirmar.
+  protected readonly blockingReservations = computed(() => {
+    const max = this.rules()?.max_active_reservations_per_user;
+    if (max === null || max === undefined) return [];
+    const active = this.myActiveReservations();
+    return active.length >= max ? active : [];
+  });
 
   constructor() {
     this.loadSlots();
     this.loadRules();
+    this.loadMyActiveReservations();
     this.form.controls.date.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.loadSlots());
   }
 
@@ -51,6 +64,14 @@ export class ReservationCreate {
       this.rules.set(await this.spacesService.getRules(this.spaceId));
     } catch {
       // el cartel de reglas es informativo; si falla, igual se puede intentar reservar
+    }
+  }
+
+  private async loadMyActiveReservations(): Promise<void> {
+    try {
+      this.myActiveReservations.set(await this.reservations.listMyActiveForSpace(this.spaceId));
+    } catch {
+      // si falla, el chequeo proactivo no se muestra pero el trigger de la base igual protege
     }
   }
 
@@ -84,7 +105,16 @@ export class ReservationCreate {
     return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  protected reservationDateRange(r: Reservation): string {
+    const date = new Date(r.starts_at).toLocaleDateString('es-AR');
+    return `${date} · ${this.slotTime(r.starts_at)} a ${this.slotTime(r.ends_at)}`;
+  }
+
   protected async submit(): Promise<void> {
+    if (this.blockingReservations().length > 0) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
