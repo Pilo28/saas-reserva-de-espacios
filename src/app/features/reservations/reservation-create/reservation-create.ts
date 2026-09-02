@@ -1,14 +1,19 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ReservationsService, type Reservation, type ReservationSlot } from '../../../core/reservations.service';
-import { SpacesService, type SpaceRules } from '../../../core/spaces.service';
+import { SpacesService, type SpaceRules, type SpaceSchedule } from '../../../core/spaces.service';
 
 function todayDateString(): string {
   const now = new Date();
   const offset = now.getTimezoneOffset();
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
 }
 
 @Component({
@@ -40,6 +45,7 @@ export class ReservationCreate {
   protected readonly errorMessage = signal('');
   protected readonly rules = signal<SpaceRules | null>(null);
   protected readonly myActiveReservations = signal<Reservation[]>([]);
+  protected readonly schedules = signal<SpaceSchedule[] | null>(null);
 
   // La regla "maximo de reservas activas" no es por dia: cuenta cualquier reserva
   // confirmada y no terminada del usuario en este espacio, sin importar la fecha. Si ya
@@ -52,10 +58,38 @@ export class ReservationCreate {
     return active.length >= max ? active : [];
   });
 
+  private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+
+  // Chequeo proactivo de los horarios de disponibilidad configurados por el admin (mismo
+  // criterio que ahora aplica la base con enforce_reservation_schedule): sin esto, el
+  // usuario completaba fecha/horario fuera de ventana y recien se enteraba al confirmar.
+  protected readonly scheduleWarning = computed(() => {
+    const schedules = this.schedules();
+    if (schedules === null) return null;
+
+    const { date, startTime, endTime } = this.formValue();
+    if (!date || !startTime || !endTime) return null;
+
+    if (schedules.length === 0) {
+      return 'Este espacio todavía no tiene horarios de disponibilidad configurados. Pedile al administrador que cargue al menos uno antes de reservar.';
+    }
+
+    const weekday = new Date(`${date}T00:00:00`).getDay();
+    const matches = schedules.some(
+      (s) =>
+        s.weekday === weekday &&
+        toMinutes(s.opens_at) <= toMinutes(startTime) &&
+        toMinutes(s.closes_at) >= toMinutes(endTime),
+    );
+
+    return matches ? null : 'Este espacio no está disponible para reservar ese día u horario.';
+  });
+
   constructor() {
     this.loadSlots();
     this.loadRules();
     this.loadMyActiveReservations();
+    this.loadSchedules();
     this.form.controls.date.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.loadSlots());
   }
 
@@ -70,6 +104,14 @@ export class ReservationCreate {
   private async loadMyActiveReservations(): Promise<void> {
     try {
       this.myActiveReservations.set(await this.reservations.listMyActiveForSpace(this.spaceId));
+    } catch {
+      // si falla, el chequeo proactivo no se muestra pero el trigger de la base igual protege
+    }
+  }
+
+  private async loadSchedules(): Promise<void> {
+    try {
+      this.schedules.set(await this.spacesService.listSchedules(this.spaceId));
     } catch {
       // si falla, el chequeo proactivo no se muestra pero el trigger de la base igual protege
     }
@@ -111,7 +153,7 @@ export class ReservationCreate {
   }
 
   protected async submit(): Promise<void> {
-    if (this.blockingReservations().length > 0) {
+    if (this.blockingReservations().length > 0 || this.scheduleWarning()) {
       return;
     }
 
